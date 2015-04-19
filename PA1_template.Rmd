@@ -1,25 +1,70 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
+author: "Abhishek Jee"
+date: "19 April 2015"
 output: 
   html_document:
     keep_md: true
 ---
 
-
 ## Loading and preprocessing the data
-
-
+```{r echo=TRUE}
+library("dplyr")
+activity_raw <- tbl_df(read.csv("activity.csv"))
+good <- complete.cases(activity_raw)
+activity_tbl <- tbl_df(activity_raw[good,])
+```
 
 ## What is mean total number of steps taken per day?
+```{r, echo=TRUE}
+daily_summary <- activity_raw %>%
+  group_by(date) %>%
+  summarize(steps_count = n(), steps_mean = mean(steps), steps_median = median(steps))
 
-
+print(daily_summary, n = 100)
+````
 
 ## What is the average daily activity pattern?
+```{r echo=TRUE}
+interval_summary <- activity_tbl %>%
+  group_by(interval) %>%
+  summarize(steps_count = n(), steps_mean = mean(steps), steps_median = median(steps))
 
-
+plot(interval_summary$interval, interval_summary$steps_mean, type = "l", main = "Average Daily Activity Pattern", xlab = "Interval", ylab = "Average Steps")
+```
 
 ## Imputing missing values
+``` {r echo=TRUE}
+activity_NA <- tbl_df(activity_raw[!good,])
+activity_NA$steps <- inner_join(activity_NA, interval_summary)$steps_mean
+activity_new <- rbind(activity_tbl, activity_NA)
 
+daily_summary <- activity_new %>%
+  group_by(date) %>%
+  summarize(steps_count = n(), steps_mean = mean(steps), steps_median = median(steps))
 
+plot(daily_summary$date, daily_summary$steps_count, type = "h", main = "Daily Count", xlab = "Date", ylab = "Steps Count")
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+``` {r echo=TRUE}
+if (weekdays(as.Date(activity_new$date)) %in% c("Saturday","Sunday"))
+{
+  activity_new$weekend <-"Weekend"
+} else
+{
+  activity_new$weekend <-"Weekday"
+}
+
+interval_summary_weekend <- activity_new %>%
+  group_by(interval,weekend) %>%
+  summarize(steps_count = n(), steps_mean = mean(steps), steps_median = median(steps)) %>%
+  filter(weekend == "Weekend")
+
+interval_summary_weekday <- activity_new %>%
+  group_by(interval,weekend) %>%
+  summarize(steps_count = n(), steps_mean = mean(steps), steps_median = median(steps)) %>%
+  filter(weekend == "Weekday")
+
+plot(interval_summary_weekday$interval, interval_summary_weekday$steps_mean, type = "l", main = "Average Daily Activity Pattern on Weekday", xlab = "Interval", ylab = "Average Steps")
+```
